@@ -9,13 +9,11 @@ url: "https://samanyougarg.com" # the base hostname & protocol for your site
 paginate:	5 # The number of posts to show per page on your homepage
 
 # Social
-facebook: facebook
-twitter: twitter
 github:  github
 
 #Additional Pages
-about: 他是一个好人
-contact: 1184571039@qq.com
+about: 
+contact: 
 
 
 permalink: /:title
