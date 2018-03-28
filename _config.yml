@@ -9,7 +9,7 @@ url: "https://samanyougarg.com" # the base hostname & protocol for your site
 paginate:	5 # The number of posts to show per page on your homepage
 
 # Social
-facebook: facebook
+facebook: https://www.jianshu.com/p/6aec3347b0ea
 twitter: twitter
 github:  github
 
