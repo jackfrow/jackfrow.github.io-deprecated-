@@ -5,8 +5,8 @@
 
 # Site
 title: Jackfrow
-subtitle: 
-description: 
+subtitle:
+description:
 author: jabber
 # Support language: de, en, fr-FR, id, ja, ko, pt-BR, pt, ru, zh-Hans, zh-hk, zh-tw
 language: zh-Hans
@@ -78,7 +78,7 @@ plugins:
 favicon: /assets/favicon.ico
 
 # Set default keywords (Use a comma to separate)
-keywords: "Jekyll, NexT"
+keywords: "iOS, 互联网科技,健身"
 
 # Set rss to false to disable feed link.
 # Leave rss as empty to use site's feed link.
@@ -117,12 +117,12 @@ index_with_subtitle: false
 # When running the site in a subdirectory (e.g. domain.tld/blog), remove the leading slash (/archives -> archives)
 menu:
   home: /
-  #categories: /categories/
-  #about: /about/
+  categories: /categories/
+  about: /about/
   archives: /archives/
   tags: /tags/
-  #sitemap: /sitemap.xml
-  #commonweal: /404.html
+  sitemap: /sitemap.xml
+  commonweal: /404.html
 
 
 # Enable/Disable menu icons.
