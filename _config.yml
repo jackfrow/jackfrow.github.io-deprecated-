@@ -1,6 +1,6 @@
 # Site settings
-title: Hanuman
-description: Hanuman is a minimal yet powerful Jekyll theme for your blogs and websites.
+title: Jabber
+description: iOS工程师，目前就职于hilife.
 cover: assets/images/radhakrishna.jpg
 logo: assets/images/logo.png
 favicon: assets/images/favicon.png
@@ -9,14 +9,11 @@ url: "https://samanyougarg.com" # the base hostname & protocol for your site
 paginate:	5 # The number of posts to show per page on your homepage
 
 # Social
-facebook: facebook
-twitter: twitter
 github:  github
 
 #Additional Pages
-about: about
-contact: contact
-privacy-policy: privacy-policy
+about: 
+contact: 
 
 
 permalink: /:title
