@@ -3,6 +3,7 @@ title: MBProgressHUD源码解析
 date: 2019-5-23 22:30:00
 tag: 源码阅读
 categories: 源码阅读
+typora-copy-images-to: ../assets/images/MBProgress.png
 ---
 
 ​    在所有程序员提高的方法中，几乎所有人都提到了要多读优秀的源码。所以在学习的路途中便开始了源码阅读的计划，至于从哪个源码开始呢，首先肯定是要自己经常用的，并且比较优秀的。所以最终确定为从MBProgressHUD开始进行源码计划。
@@ -87,7 +88,7 @@ categories: 源码阅读
 
 外部暴露的API主要分为show和hide两个类，不论是show还是hide，方法的最终调用都会走到`animateIn:withType: completion:`，下面是方法调用流程图。
 
-![](/Users/jackfrow/Desktop/jackfrow/assets/images/MBProgress.png)
+![](/Users/jackfrow/Desktop/jackfrow/assets/images/MBProgress.png/MBProgress.png)
 
 ### 内部实现
 
