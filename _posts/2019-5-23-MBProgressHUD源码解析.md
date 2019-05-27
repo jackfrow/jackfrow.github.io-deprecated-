@@ -25,6 +25,7 @@ categories: 源码阅读
 + (instancetype)showHUDAddedTo:(UIView *)view animated:(BOOL)animated;
 + (BOOL)hideHUDForView:(UIView *)view animated:(BOOL)animated;
 + (nullable MBProgressHUD *)HUDForView:(UIView *)view;
+- (instancetype)initWithView:(UIView *)view;
 - (void)showAnimated:(BOOL)animated;
 - (void)hideAnimated:(BOOL)animated;
 - (void)hideAnimated:(BOOL)animated afterDelay:(NSTimeInterval)delay;
@@ -82,3 +83,194 @@ categories: 源码阅读
 @property (nonatomic, strong) UIColor *color;
 ```
 
+### 调用流程
+
+外部暴露的API主要分为show和hide两个类，不论是show还是hide，方法的最终调用都会走到`animateIn:withType: completion:`，下面是方法调用流程图。
+
+![](/Users/jackfrow/Desktop/jackfrow/assets/images/MBProgress.png)
+
+### 内部实现
+
+#### show
+
+```objective-c
++ (instancetype)showHUDAddedTo:(UIView *)view animated:(BOOL)animated {
+    MBProgressHUD *hud = [[self alloc] initWithView:view];
+    hud.removeFromSuperViewOnHide = YES;
+    [view addSubview:hud];
+    [hud showAnimated:animated];
+    return hud;
+}
+
+- (void)showAnimated:(BOOL)animated {
+    MBMainThreadAssert();
+    [self.minShowTimer invalidate];
+    self.useAnimation = animated;
+    self.finished = NO;
+    // If the grace time is set, postpone the HUD display
+    if (self.graceTime > 0.0) {
+        NSTimer *timer = [NSTimer timerWithTimeInterval:self.graceTime target:self selector:@selector(handleGraceTimer:) userInfo:nil repeats:NO];
+        [[NSRunLoop currentRunLoop] addTimer:timer forMode:NSRunLoopCommonModes];
+        self.graceTimer = timer;
+    } 
+    // ... otherwise show the HUD immediately
+    else {
+        [self showUsingAnimation:self.useAnimation];
+    }
+}
+
+- (void)showUsingAnimation:(BOOL)animated {
+    // Cancel any previous animations
+    [self.bezelView.layer removeAllAnimations];
+    [self.backgroundView.layer removeAllAnimations];
+
+    // Cancel any scheduled hideAnimated:afterDelay: calls
+    [self.hideDelayTimer invalidate];
+
+    self.showStarted = [NSDate date];
+    self.alpha = 1.f;
+
+    // Needed in case we hide and re-show with the same NSProgress object attached.
+    [self setNSProgressDisplayLinkEnabled:YES];
+
+    if (animated) {
+        [self animateIn:YES withType:self.animationType completion:NULL];
+    } else {
+        self.bezelView.alpha = 1.f;
+        self.backgroundView.alpha = 1.f;
+    }
+}
+
+```
+
+#### hide
+
+```objective-c
++ (BOOL)hideHUDForView:(UIView *)view animated:(BOOL)animated {
+    MBProgressHUD *hud = [self HUDForView:view];
+    if (hud != nil) {
+        hud.removeFromSuperViewOnHide = YES;
+        [hud hideAnimated:animated];
+        return YES;
+    }
+    return NO;
+}
+
++ (MBProgressHUD *)HUDForView:(UIView *)view {
+    NSEnumerator *subviewsEnum = [view.subviews reverseObjectEnumerator];
+    for (UIView *subview in subviewsEnum) {
+        if ([subview isKindOfClass:self]) {
+            MBProgressHUD *hud = (MBProgressHUD *)subview;
+            if (hud.hasFinished == NO) {
+                return hud;
+            }
+        }
+    }
+    return nil;
+}
+
+ (void)hideAnimated:(BOOL)animated {
+    MBMainThreadAssert();
+    [self.graceTimer invalidate];
+    self.useAnimation = animated;
+    self.finished = YES;
+    // If the minShow time is set, calculate how long the HUD was shown,
+    // and postpone the hiding operation if necessary
+    if (self.minShowTime > 0.0 && self.showStarted) {
+        NSTimeInterval interv = [[NSDate date] timeIntervalSinceDate:self.showStarted];
+        if (interv < self.minShowTime) {
+            NSTimer *timer = [NSTimer timerWithTimeInterval:(self.minShowTime - interv) target:self selector:@selector(handleMinShowTimer:) userInfo:nil repeats:NO];
+            [[NSRunLoop currentRunLoop] addTimer:timer forMode:NSRunLoopCommonModes];
+            self.minShowTimer = timer;
+            return;
+        } 
+    }
+    // ... otherwise hide the HUD immediately
+    [self hideUsingAnimation:self.useAnimation];
+}
+
+- (void)hideUsingAnimation:(BOOL)animated {
+    // Cancel any scheduled hideAnimated:afterDelay: calls.
+    // This needs to happen here instead of in done,
+    // to avoid races if another hideAnimated:afterDelay:
+    // call comes in while the HUD is animating out.
+    [self.hideDelayTimer invalidate];
+
+    if (animated && self.showStarted) {
+        self.showStarted = nil;
+        [self animateIn:NO withType:self.animationType completion:^(BOOL finished) {
+            [self done];
+        }];
+    } else {
+        self.showStarted = nil;
+        self.bezelView.alpha = 0.f;
+        self.backgroundView.alpha = 1.f;
+        [self done];
+    }
+}
+```
+
+这里注意一下在拿当前hud时的方法.
+
+```objective-c
++ (MBProgressHUD *)HUDForView:(UIView *)view {
+    NSEnumerator *subviewsEnum = [view.subviews reverseObjectEnumerator];
+    for (UIView *subview in subviewsEnum) {
+        if ([subview isKindOfClass:self]) {
+            MBProgressHUD *hud = (MBProgressHUD *)subview;
+            if (hud.hasFinished == NO) {
+                return hud;
+            }
+        }
+    }
+    return nil;
+}
+```
+
+因为hud通常是最后放上去的，所以这里在拿hud的时候使用反向枚举器，可以减少循环次数。
+
+
+
+而无论是`show`方法，还是`hide`方法，在设定animated属性为YES的前提下，最终都会走到`animateIn: withType: completion:`方法：
+
+```objective-c
+- (void)animateIn:(BOOL)animatingIn withType:(MBProgressHUDAnimation)type completion:(void(^)(BOOL finished))completion {
+    // Automatically determine the correct zoom animation type
+    if (type == MBProgressHUDAnimationZoom) {
+        type = animatingIn ? MBProgressHUDAnimationZoomIn : MBProgressHUDAnimationZoomOut;
+    }
+
+    CGAffineTransform small = CGAffineTransformMakeScale(0.5f, 0.5f);
+    CGAffineTransform large = CGAffineTransformMakeScale(1.5f, 1.5f);
+
+    // Set starting state
+    UIView *bezelView = self.bezelView;
+    if (animatingIn && bezelView.alpha == 0.f && type == MBProgressHUDAnimationZoomIn) {
+        bezelView.transform = small;
+    } else if (animatingIn && bezelView.alpha == 0.f && type == MBProgressHUDAnimationZoomOut) {
+        bezelView.transform = large;
+    }
+
+    // Perform animations
+    dispatch_block_t animations = ^{
+        if (animatingIn) {
+            bezelView.transform = CGAffineTransformIdentity;
+        } else if (!animatingIn && type == MBProgressHUDAnimationZoomIn) {
+            bezelView.transform = large;
+        } else if (!animatingIn && type == MBProgressHUDAnimationZoomOut) {
+            bezelView.transform = small;
+        }
+        CGFloat alpha = animatingIn ? 1.f : 0.f;
+        bezelView.alpha = alpha;
+        self.backgroundView.alpha = alpha;
+    };
+    [UIView animateWithDuration:0.3 delay:0. usingSpringWithDamping:1.f initialSpringVelocity:0.f options:UIViewAnimationOptionBeginFromCurrentState animations:animations completion:completion];
+}
+
+```
+
+### 收获
+
+1. 暴露出来的API最终都会走到同一个私有方法里。
+2. 使用CADisplayLink来刷新更新频率可能很高的view。
+3. 使用循环时，注意条件可以减少循环次数，进而对程序进行优化。
