@@ -45,7 +45,7 @@ highlighter: rouge
 ## 'redcarpet' is unsupported on GitHub Pages now.
 markdown: kramdown
 kramdown:
-    input: GFM
+    input: HTML
 
 # Default Attributes
 ## Docs: https://jekyllrb.com/docs/configuration/#front-matter-defaults
@@ -201,11 +201,7 @@ font:
     family:
     size:
 
-highlight:
-  enable: true
-  line_number: true
-  auto_detect: true
-  tab_replace:
+
 
 
 
