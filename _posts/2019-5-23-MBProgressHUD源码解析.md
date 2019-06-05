@@ -24,6 +24,12 @@ typora-root-url: ../assets
 
 ##### 方法
 
+~~~objective-c
+- (void)showAnimated:(BOOL)animated;
+~~~
+
+
+
 ```objective-c
 + (instancetype)showHUDAddedTo:(UIView *)view animated:(BOOL)animated;
 + (BOOL)hideHUDForView:(UIView *)view animated:(BOOL)animated;
